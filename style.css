@@ -136,9 +136,10 @@ body{
 
 .trigger-row{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 12px;
   margin-bottom: 22px;
+  align-items: start;
 }
 .trigger-pad{
   position: relative;
@@ -154,6 +155,46 @@ body{
 .trigger-pad svg{ position:absolute; inset:0; z-index:0; width:100%; height:100%; overflow:visible; }
 .trigger-pad span{ position:relative; z-index:1; }
 .trigger-pad:active span{ transform: translateY(1px); display:inline-block; }
+
+.buffer-slot{
+  position: relative;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+}
+.buffer-slot-pick{
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.5 / 1;
+  background: none; border: none; cursor: pointer;
+  font-family: 'Kalam', cursive; font-weight: 700;
+  color: var(--ink);
+}
+.buffer-slot-pick svg{ position:absolute; inset:0; z-index:0; width:100%; height:100%; overflow:visible; }
+.buffer-slot-num{ position:relative; z-index:1; font-size: 18px; }
+.buffer-slot-status{
+  font-family: 'Special Elite', monospace;
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  text-align:center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.buffer-slot-input{
+  position:absolute; width:1px; height:1px;
+  padding:0; margin:-1px; overflow:hidden;
+  clip: rect(0,0,0,0); white-space:nowrap; border:0;
+}
+.buffer-slot-play{
+  background: none; border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  width: 26px; height: 26px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+}
+.buffer-slot-play:active{ background: var(--spot-soft); }
 
 .footer-row{ display:flex; align-items:center; justify-content: space-between; gap: 16px; }
 

@@ -96,7 +96,7 @@
   const ctx2d = canvas.getContext("2d");
   const moduleFrame = document.getElementById("moduleFrame");
   const scopeFrame = document.getElementById("scopeFrame");
-  let padFrames = []; // {svg} pour redessiner au redimensionnement
+  let padFrames = []; // {redraw} pour redessiner au redimensionnement
 
 
   // ==== dessin "gravure lino" (rough.js) ====================================
@@ -124,10 +124,31 @@
     svgEl.appendChild(node);
   }
 
+  // Cadre d'un emplacement de fichier (buffer) : creux/pointillé quand
+  // vide, hachuré plein une fois un son chargé.
+  function drawSlotFrame(svgEl, seedKey, loaded) {
+    const w = svgEl.parentElement.clientWidth, h = svgEl.parentElement.clientHeight;
+    if (!w || !h) return;
+    svgEl.setAttribute("width", w);
+    svgEl.setAttribute("height", h);
+    svgEl.setAttribute("viewBox", "0 0 " + w + " " + h);
+    clearSvg(svgEl);
+    const rc = rough.svg(svgEl);
+    const pal = palette();
+    const node = rc.rectangle(4, 4, w - 8, h - 8, {
+      roughness: 2, bowing: 2,
+      fill: loaded ? pal.spot : pal.paper2,
+      fillStyle: "hachure", hachureGap: loaded ? 2.4 : 4.5,
+      stroke: pal.ink, strokeWidth: 2,
+      seed: seedFromString(seedKey)
+    });
+    svgEl.appendChild(node);
+  }
+
   function drawFramesNow() {
     drawFrame(moduleFrame, "module-frame");
     drawFrame(scopeFrame, "scope-frame");
-    padFrames.forEach(function (p) { drawPadFrame(p.svg, p.seedKey); });
+    padFrames.forEach(function (p) { p.redraw(); });
   }
   let resizeTimer = null;
   window.addEventListener("resize", function () {
@@ -505,6 +526,9 @@
 
   // Génère un pad de déclenchement par "inport" déclaré dans le patch —
   // fonctionne pour 1 inport (un gros bouton) comme pour 8 (une grille).
+  // Si l'inport correspond à un buffer déclaré dans externalDataRefs
+  // (un objet buffer~ nommé pareil), on génère un sélecteur de fichier
+  // audio à la place d'un simple bouton "bang".
   function buildTriggers() {
     triggerRow.innerHTML = "";
     padFrames = [];
@@ -518,35 +542,129 @@
       return ia - ib;
     });
     const compact = inports.length > 1;
+    const bufferIds = new Set(
+      (patcher.desc.externalDataRefs || [])
+        .filter(function (d) { return d.type === "Float32Buffer"; })
+        .map(function (d) { return d.id; })
+    );
 
     inports.forEach(function (inport) {
       const tag = inport.tag;
-      const label = INPORT_LABELS[tag] || (tag.charAt(0).toUpperCase() + tag.slice(1));
-
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "trigger-pad" + (compact ? " trigger-pad--compact" : "");
-
-      const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      btn.appendChild(svgEl);
-      const span = document.createElement("span");
-      span.textContent = label;
-      btn.appendChild(span);
-
-      btn.addEventListener("click", async function () {
-        try {
-          if (!running) await start();
-          sendBang(tag);
-        } catch (err) {
-          console.error(err);
-          showError("Impossible de déclencher : " + (err && err.message ? err.message : err));
-        }
-      });
-
-      triggerRow.appendChild(btn);
-      padFrames.push({ svg: svgEl, seedKey: "pad-" + tag });
-      drawPadFrame(svgEl, "pad-" + tag);
+      if (bufferIds.has(tag)) {
+        triggerRow.appendChild(buildBufferSlot(tag, compact));
+      } else {
+        triggerRow.appendChild(buildBangPad(tag, compact));
+      }
     });
+  }
+
+  function buildBangPad(tag, compact) {
+    const label = INPORT_LABELS[tag] || (tag.charAt(0).toUpperCase() + tag.slice(1));
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "trigger-pad" + (compact ? " trigger-pad--compact" : "");
+
+    const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    btn.appendChild(svgEl);
+    const span = document.createElement("span");
+    span.textContent = label;
+    btn.appendChild(span);
+
+    btn.addEventListener("click", async function () {
+      try {
+        if (!running) await start();
+        sendBang(tag);
+      } catch (err) {
+        console.error(err);
+        showError("Impossible de déclencher : " + (err && err.message ? err.message : err));
+      }
+    });
+
+    triggerRow.appendChild(btn);
+    padFrames.push({ redraw: function () { drawPadFrame(svgEl, "pad-" + tag); } });
+    drawPadFrame(svgEl, "pad-" + tag);
+    return btn;
+  }
+
+  // Sélecteur de fichier pour un buffer nommé (ex. "one".."eight").
+  // On ne peut pas transmettre un chemin disque au patch depuis un
+  // navigateur : on lit le fichier choisi, on le décode en AudioBuffer,
+  // et on le pousse dans le buffer RNBO via setDataBuffer(id, ...).
+  function buildBufferSlot(tag, compact) {
+    const label = INPORT_LABELS[tag] || (tag.charAt(0).toUpperCase() + tag.slice(1));
+
+    const wrap = document.createElement("div");
+    wrap.className = "buffer-slot" + (compact ? " buffer-slot--compact" : "");
+
+    const pickBtn = document.createElement("button");
+    pickBtn.type = "button";
+    pickBtn.className = "buffer-slot-pick";
+    const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    pickBtn.appendChild(svgEl);
+    const num = document.createElement("span");
+    num.className = "buffer-slot-num";
+    num.textContent = label;
+    pickBtn.appendChild(num);
+    wrap.appendChild(pickBtn);
+
+    const status = document.createElement("div");
+    status.className = "buffer-slot-status";
+    status.textContent = "Choisir un son…";
+    wrap.appendChild(status);
+
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "audio/*";
+    fileInput.className = "buffer-slot-input";
+    wrap.appendChild(fileInput);
+
+    const playBtn = document.createElement("button");
+    playBtn.type = "button";
+    playBtn.className = "buffer-slot-play";
+    playBtn.textContent = "▶";
+    playBtn.title = "Déclencher " + label;
+    wrap.appendChild(playBtn);
+
+    let loaded = false;
+    function redraw() { drawSlotFrame(svgEl, "slot-" + tag, loaded); }
+    redraw();
+    padFrames.push({ redraw: redraw });
+
+    pickBtn.addEventListener("click", function () { fileInput.click(); });
+
+    fileInput.addEventListener("change", async function () {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      status.textContent = "Chargement…";
+      try {
+        await ensureAudio();
+        const arrayBuf = await file.arrayBuffer();
+        const audioBuf = await context.decodeAudioData(arrayBuf);
+        await device.setDataBuffer(tag, audioBuf);
+        loaded = true;
+        redraw();
+        status.textContent = file.name;
+      } catch (err) {
+        console.error(err);
+        loaded = false;
+        redraw();
+        status.textContent = "Choisir un son…";
+        showError("Impossible de charger le fichier pour « " + label + " » : " + (err && err.message ? err.message : err));
+      }
+    });
+
+    playBtn.addEventListener("click", async function () {
+      try {
+        if (!running) await start();
+        sendBang(tag);
+      } catch (err) {
+        console.error(err);
+        showError("Impossible de déclencher : " + (err && err.message ? err.message : err));
+      }
+    });
+
+    return wrap;
   }
 
   // ---- volume principal ----
