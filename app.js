@@ -523,7 +523,7 @@
           seedKey: "toggle-" + p.name,
           onChange: function (on) {
             valueEl.textContent = on ? "On" : "Off";
-            setParam(p.name, on ? 1 : 0);
+            setParam(p.paramId, on ? 1 : 0);
             saveParam(p.name, on ? 1 : 0);
           }
         });
@@ -557,7 +557,7 @@
             : (p.steps > 0 ? (p.maximum - p.minimum) / p.steps : (p.maximum - p.minimum) / 1000),
           onChange: function (v) {
             valueEl.textContent = displayText(v);
-            setParam(p.name, v);
+            setParam(p.paramId, v);
             saveParam(p.name, v);
           }
         });
@@ -567,9 +567,15 @@
     });
   }
 
-  function setParam(name, value) {
+  // Adresse un paramètre au device RNBO. On utilise paramId (l'identifiant
+  // complet, ex. "one[1]/div_one" pour un paramètre dans un sous-patcher
+  // nommé "one") et non le simple nom ("div_one") : device.parametersById
+  // est indexé par cet identifiant complet, donc un paramètre situé dans
+  // un sous-patcher ne répondrait à rien si on l'adressait par son nom
+  // seul — le knob tournerait dans l'interface sans effet sur le son.
+  function setParam(paramId, value) {
     if (!device) return;
-    const param = device.parametersById.get(name);
+    const param = device.parametersById.get(paramId);
     if (param) param.value = value;
   }
 
@@ -577,7 +583,7 @@
     const saved = loadSaved();
     (patcher.desc.parameters || []).forEach(function (p) {
       const v = (saved[p.name] !== undefined) ? saved[p.name] : p.initialValue;
-      setParam(p.name, v);
+      setParam(p.paramId, v);
     });
   }
 
