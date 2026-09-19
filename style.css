@@ -1,0 +1,186 @@
+/* ==========================================================================
+   Slider Chords — thème "gravure lino"
+   Papier crème + encre + une seule couleur d'accent (façon bichromie
+   d'atelier). Les formes des commandes (knobs, interrupteur, bouton)
+   sont dessinées à la main par rough.js dans app.js — ce fichier ne
+   gère que la mise en page, la typographie et les couleurs.
+   Pour changer complètement l'apparence : dupliquer ce fichier et
+   changer le <link> dans index.html (les couleurs sont centralisées
+   dans les variables ci-dessous et dans le bloc ROUGH_PALETTE
+   d'app.js — garder les deux synchronisés).
+   ========================================================================== */
+
+:root{
+  --paper:#f1e9d2;
+  --paper-2:#e8dfc2;
+  --ink:#211a12;
+  --ink-soft:#5b5040;
+  --spot:#a83a2c;
+  --spot-soft: rgba(168,58,44,0.18);
+  --line: rgba(33,26,18,0.16);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#1c1712;
+    --paper-2:#241d16;
+    --ink:#f1e9d2;
+    --ink-soft:#b8ab8d;
+    --spot:#e0654f;
+    --spot-soft: rgba(224,101,79,0.18);
+    --line: rgba(241,233,210,0.16);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#1c1712; --paper-2:#241d16; --ink:#f1e9d2; --ink-soft:#b8ab8d;
+  --spot:#e0654f; --spot-soft: rgba(224,101,79,0.18); --line: rgba(241,233,210,0.16);
+}
+
+*{ box-sizing: border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  background-color: var(--paper);
+  /* grain de papier : bruit SVG en data-uri, sans fichier image */
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/></svg>");
+  color: var(--ink);
+  font-family: 'Special Elite', 'Courier New', monospace;
+  min-height: 100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 32px 16px;
+}
+
+.rack{ width: 100%; max-width: 600px; }
+
+.module{
+  position: relative;
+  padding: 30px 26px 28px;
+}
+.module-frame{
+  position:absolute; inset:0;
+  pointer-events:none;
+  z-index:0;
+  overflow: visible;
+}
+.module > *{ position:relative; z-index:1; }
+
+.rail{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom: 22px; }
+.brand{ display:flex; flex-direction:column; gap:4px; }
+.brand .kicker{
+  font-family: 'Special Elite', monospace;
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--spot);
+}
+.brand h1{
+  font-family: 'Permanent Marker', cursive;
+  font-size: 30px; font-weight: 400; margin: 0; line-height: 1;
+  color: var(--ink);
+  transform: rotate(-1deg);
+}
+.stamp{
+  font-family: 'Special Elite', monospace;
+  font-size: 10px; letter-spacing: 0.1em; color: var(--ink-soft);
+  border: 1.5px solid var(--ink-soft);
+  border-radius: 3px;
+  padding: 3px 7px;
+  transform: rotate(2deg);
+  opacity: 0.75;
+}
+
+.scope{
+  position: relative;
+  height: 96px;
+  margin-bottom: 24px;
+}
+.scope canvas{ position:relative; z-index:1; width:100%; height:100%; display:block; }
+.scope-frame{ position:absolute; inset:0; z-index:0; pointer-events:none; }
+
+.controls{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px 8px;
+  margin-bottom: 22px;
+}
+@media (max-width: 440px){ .controls{ grid-template-columns: repeat(2, 1fr); } }
+
+.ctrl{
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.ctrl .label{
+  font-family: 'Kalam', cursive;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+  text-align:center;
+  line-height:1.2;
+  min-height: 32px;
+  display:flex; align-items:center;
+}
+.ctrl .value{
+  font-family: 'Special Elite', monospace;
+  font-size: 11.5px; color: var(--spot); font-variant-numeric: tabular-nums;
+}
+
+.knob{
+  width: 64px; height: 64px; position: relative;
+  touch-action: none; cursor: ns-resize; user-select: none;
+}
+.knob svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+
+.toggle-wrap{ display:flex; align-items:center; justify-content:center; height:64px; }
+.toggle{
+  width: 62px; height: 34px; position: relative; cursor: pointer; touch-action: manipulation;
+}
+.toggle svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+
+.trigger-row{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.trigger-pad{
+  position: relative;
+  background: none; border: none; cursor: pointer;
+  padding: 14px 30px;
+  font-family: 'Kalam', cursive; font-weight: 700; font-size: 15px;
+  color: var(--paper);
+}
+.trigger-pad--compact{
+  padding: 14px 6px;
+  font-size: 17px;
+}
+.trigger-pad svg{ position:absolute; inset:0; z-index:0; width:100%; height:100%; overflow:visible; }
+.trigger-pad span{ position:relative; z-index:1; }
+.trigger-pad:active span{ transform: translateY(1px); display:inline-block; }
+
+.footer-row{ display:flex; align-items:center; justify-content: space-between; gap: 16px; }
+
+.power{
+  display:flex; align-items:center; gap: 10px;
+  cursor: pointer; padding: 6px 4px;
+}
+.power .led{ width: 22px; height:22px; position:relative; flex:none; }
+.power .led svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.power span{
+  font-family: 'Kalam', cursive; font-weight: 700; font-size: 14px; color: var(--ink);
+}
+
+.master{ display:flex; align-items:center; gap:10px; }
+.master .label{
+  font-family: 'Kalam', cursive; font-weight: 700; font-size: 12px; color: var(--ink);
+}
+
+.hint{
+  text-align:center; font-size: 12px; color: var(--ink-soft);
+  margin-top: 18px; line-height: 1.6; font-style: italic;
+}
+.hint b{ color: var(--spot); font-style: normal; }
+
+.badge-err{
+  display:none; margin-top: 14px;
+  border: 1.5px dashed var(--spot);
+  color: var(--spot); font-family:'Special Elite', monospace;
+  font-size: 12px; padding: 10px 12px; border-radius: 4px; line-height:1.5;
+}
