@@ -12,17 +12,22 @@
   const PATCH_URL = "patch/patch_export.json";
   const DEPENDENCIES_URL = "patch/dependencies.json";
 
-  // Libellés français pour les paramètres RNBO connus.
+  // Libellés français pour les paramètres RNBO connus (hors paramètres
+  // "par canal" div_x / prob_x, gérés plus bas de façon générique).
   const LABELS = {
     bpm: "Tempo",
     metro: "Métronome",
     tempo_delta: "Variation de tempo",
     beat_slide: "Glissando rythmique",
     slide: "Glissando",
-    div_one: "Subdivision",
     tempo: "Tempo",
     loop: "Boucle"
   };
+
+  // Canaux nommés en toutes lettres dans le patch (one..eight). Sert à
+  // la fois à libeller/ordonner les pads de déclenchement (inports) et
+  // les paramètres par canal type "div_two", "prob_five".
+  const CHANNEL_WORDS = ["one", "two", "three", "four", "five", "six", "seven", "eight"];
 
   // Libellés pour les boutons de déclenchement générés à partir des
   // "inports" du patch. Tag inconnu => on affiche le tag tel quel
@@ -37,6 +42,60 @@
   // nombres écrits en toutes lettres (l'ordre du patch lui-même est
   // souvent arbitraire).
   const INPORT_ORDER = ["in1", "one", "two", "three", "four", "five", "six", "seven", "eight"];
+
+  // Préfixes de paramètres "par canal" connus (div_<canal>, prob_<canal>)
+  // et leur libellé français. Un nouveau préfixe suivant la même
+  // convention (prefixe_<mot du canal>) s'affiche automatiquement avec
+  // ce libellé + le numéro du canal ; sinon le nom brut du paramètre
+  // s'affiche, comme pour les inports inconnus.
+  const CHANNEL_PARAM_LABELS = {
+    div: "Subdivision",
+    prob: "Probabilité"
+  };
+
+  // Retourne { prefix, word, channel } si le nom du paramètre suit la
+  // convention "prefixe_motDuCanal" (ex. "prob_five" -> prob, five, 5),
+  // sinon null.
+  function channelParamInfo(name) {
+    const idx = name.lastIndexOf("_");
+    if (idx === -1) return null;
+    const prefix = name.slice(0, idx);
+    const word = name.slice(idx + 1);
+    const channel = CHANNEL_WORDS.indexOf(word);
+    if (channel === -1) return null;
+    return { prefix: prefix, word: word, channel: channel + 1 };
+  }
+
+  function paramLabel(p) {
+    if (LABELS[p.name]) return LABELS[p.name];
+    const info = channelParamInfo(p.name);
+    if (info && CHANNEL_PARAM_LABELS[info.prefix]) {
+      return CHANNEL_PARAM_LABELS[info.prefix] + " " + info.channel;
+    }
+    return p.name;
+  }
+
+  // Ordre d'affichage des commandes : d'abord les paramètres globaux
+  // connus (tempo, boucle...), puis les paramètres par canal groupés
+  // canal par canal (div_one, prob_one, div_two, prob_two, ...) plutôt
+  // que dans l'ordre arbitraire du patch. Les paramètres non reconnus
+  // gardent leur position d'origine, à la fin.
+  function sortedParameters(parameters) {
+    const known = ["tempo", "loop"];
+    CHANNEL_WORDS.forEach(function (word) {
+      Object.keys(CHANNEL_PARAM_LABELS).forEach(function (prefix) {
+        known.push(prefix + "_" + word);
+      });
+    });
+    return parameters.slice().sort(function (a, b) {
+      const ia = known.indexOf(a.name);
+      const ib = known.indexOf(b.name);
+      if (ia === -1 && ib === -1) return 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+  }
 
   // ---- couleurs pour rough.js (doivent rester cohérentes avec style.css) ----
   function cssVar(name) {
@@ -426,11 +485,11 @@
     controlsEl.innerHTML = "";
     const saved = loadSaved();
 
-    (patcher.desc.parameters || []).forEach(function (p) {
+    sortedParameters(patcher.desc.parameters || []).forEach(function (p) {
       if (p.visible === false) return;
       const isToggle = p.isEnum && p.enumValues && p.enumValues.length === 2;
       const isStepped = p.isEnum && p.enumValues && p.enumValues.length > 2;
-      const label = LABELS[p.name] || p.name;
+      const label = paramLabel(p);
       const initial = (saved[p.name] !== undefined) ? saved[p.name] : p.initialValue;
 
       const wrap = document.createElement("div");
