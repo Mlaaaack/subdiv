@@ -2,18 +2,22 @@
 // Slider Chords — logique RNBO / Web Audio + rendu "gravure lino"
 // Les formes des commandes sont dessinées à la main (au sens : par du
 // code, avec de l'aléatoire contrôlé) via rough.js plutôt qu'en CSS pur.
-// Pour changer de patch : remplacer patch/patch_export.json (et
-// patch/dependencies.json si besoin) — rien ici à modifier.
+// Pour changer de patch : remplacer patch/patch.export.json (et
+// patch/dependencies.json si besoin) par un nouvel export RNBO, sans
+// renommer les fichiers — rien ici à modifier.
 // ==========================================================================
 (function () {
   "use strict";
 
   // ---- config : chemins des fichiers du patch ----
-  const PATCH_URL = "patch/patch_export.json";
+  // Noms de fichiers RNBO par défaut ("Export -> Web") : ne pas
+  // renommer patch.export.json en patch_export.json, sinon il faut
+  // refaire ce renommage à chaque nouvel export.
+  const PATCH_URL = "patch/patch.export.json";
   const DEPENDENCIES_URL = "patch/dependencies.json";
 
   // Libellés français pour les paramètres RNBO connus (hors paramètres
-  // "par canal" div_x / prob_x, gérés plus bas de façon générique).
+  // "par canal" div_x / prob_x / vol_x, gérés plus bas de façon générique).
   const LABELS = {
     bpm: "Tempo",
     metro: "Métronome",
@@ -50,7 +54,8 @@
   // s'affiche, comme pour les inports inconnus.
   const CHANNEL_PARAM_LABELS = {
     div: "Subdivision",
-    prob: "Probabilité"
+    prob: "Probabilité",
+    vol: "Volume"
   };
 
   // Retourne { prefix, word, channel } si le nom du paramètre suit la
