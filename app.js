@@ -782,6 +782,16 @@
 
     device = await RNBO.createDevice({ context, patcher });
 
+    // Si le patch utilise le transport global de RNBO (objets phasor~/metro
+    // avec l'attribut @lock 1, souvent utilisé pour caler des subdivisions
+    // sur un tempo), ce transport ne tourne pas tout seul dans le SDK web —
+    // contrairement à l'éditeur Max, où il est déjà actif. On le démarre
+    // explicitement ici ; si le patch ne s'en sert pas du tout, cet appel
+    // est sans effet.
+    try {
+      device.scheduleEvent(new RNBO.TransportEvent(RNBO.TimeNow, 1));
+    } catch (e) { /* API transport indisponible dans cette version de RNBO */ }
+
     if (dependencies && dependencies.length) {
       try { await device.loadDataBufferDependencies(dependencies); } catch (e) { /* pas de sample dans ce patch */ }
     }
